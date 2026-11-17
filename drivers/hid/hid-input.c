@@ -48,6 +48,15 @@ static const struct {
 	__s32 y;
 }  hid_hat_to_axis[] = {{ 0, 0}, { 0,-1}, { 1,-1}, { 1, 0}, { 1, 1}, { 0, 1}, {-1, 1}, {-1, 0}, {-1,-1}};
 
+/*
+ * Android TV boxes: optionally report the right mouse button as BTN_SIDE, which the Android
+ * input stack turns into KEYCODE_BACK (like the side "back" button of 5-button mice).
+ * Runtime switch: /sys/module/hid/parameters/right_click_back
+ */
+static bool right_click_back;
+module_param(right_click_back, bool, 0644);
+MODULE_PARM_DESC(right_click_back, "Report the right mouse button as BTN_SIDE (Android: Back)");
+
 #define map_abs(c)	hid_map_usage(hidinput, usage, &bit, &max, EV_ABS, (c))
 #define map_rel(c)	hid_map_usage(hidinput, usage, &bit, &max, EV_REL, (c))
 #define map_key(c)	hid_map_usage(hidinput, usage, &bit, &max, EV_KEY, (c))
@@ -637,6 +646,9 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		}
 
 		map_key(code);
+		/* Lets right_click_back report BTN_SIDE (the input core drops undeclared keys). */
+		if (code == BTN_RIGHT)
+			set_bit(BTN_SIDE, input->keybit);
 		break;
 
 	case HID_UP_SIMULATION:
@@ -1397,6 +1409,12 @@ void hidinput_hid_event(struct hid_device *hid, struct hid_field *field, struct 
 	if (usage->type == EV_KEY &&
 	    (!test_bit(usage->code, input->key)) == value)
 		input_event(input, EV_MSC, MSC_SCAN, usage->hid);
+
+	if (unlikely(right_click_back) && usage->type == EV_KEY &&
+	    usage->code == BTN_RIGHT && test_bit(BTN_SIDE, input->keybit)) {
+		input_event(input, EV_KEY, BTN_SIDE, value);
+		return;
+	}
 
 	input_event(input, usage->type, usage->code, value);
 
