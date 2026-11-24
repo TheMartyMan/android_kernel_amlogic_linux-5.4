@@ -242,19 +242,18 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.eltest_flag = -1,
 };
 
-bool force_device_mode;
+bool force_device_mode = true;
 module_param_named(otg_device, force_device_mode,
 		bool, S_IRUGO | S_IWUSR);
 
-static char otg_mode_string[2] = "0";
+/*
+ * 0 is the boot loader's default, which it also restores on the first boot
+ * after an A/B update, so it does not mean that somebody wants host mode.
+ * Use device mode unless host mode was asked for with 2.
+ */
 static int force_otg_mode(char *s)
 {
-	if (s != NULL)
-		sprintf(otg_mode_string, "%s", s);
-	if (strcmp(otg_mode_string, "0") == 0)
-		force_device_mode = 0;
-	else
-		force_device_mode = 1;
+	force_device_mode = !s || strcmp(s, "2") != 0;
 	return 0;
 }
 __setup("otg_device=", force_otg_mode);
