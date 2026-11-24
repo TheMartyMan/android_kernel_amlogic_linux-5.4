@@ -22,7 +22,12 @@
 #include <linux/magic.h>
 #include <linux/slab.h>
 
-#define TRACEFS_DEFAULT_MODE	0700
+/*
+ * Android relies on SELinux, not on DAC, to guard tracefs (Android common kernels use 0755 too).
+ * Every mount of tracefs, including the automount on debugfs/tracing in each mount namespace,
+ * applies this default to the root directory again, so a chmod from init does not last.
+ */
+#define TRACEFS_DEFAULT_MODE	0755
 
 static struct vfsmount *tracefs_mount;
 static int tracefs_mount_count;

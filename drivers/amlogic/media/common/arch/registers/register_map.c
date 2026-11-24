@@ -826,6 +826,9 @@ static int __init codec_io_probe(struct platform_device *pdev)
 
 	for (i = CODECIO_CBUS_BASE; i < CODECIO_BUS_MAX; i++) {
 		if (of_address_to_resource(pdev->dev.of_node, i, &res)) {
+			/* nocbus was added later; most device trees do not have it */
+			if (i == CODECIO_NOC_BASE)
+				break;
 			pr_err("found resource failed, i=%d\n", i);
 			return -1;
 		}

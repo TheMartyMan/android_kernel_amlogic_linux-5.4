@@ -53,10 +53,8 @@ static int cpuinfo_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	shm_out = get_meson_sm_output_base();
-	if (!shm_out) {
-		pr_err("failed to allocate shared memory\n");
-		return -ENOMEM;
-	}
+	if (!shm_out) /* secmon probes later (subsys_initcall) */
+		return -EPROBE_DEFER;
 
 	meson_sm_mutex_lock();
 	ret = fn_smc(cmd, 2, 0, 0);
