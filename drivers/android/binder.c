@@ -5014,12 +5014,24 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		mutex_unlock(&binder_procs_lock);
 
 		for (i = 0; i < target_procs_count; i++) {
-			if (ret >= 0)
-				ret = binder_ioctl_freeze(&info,
-							  target_procs[i]);
-
-			binder_proc_dec_tmpref(target_procs[i]);
+			ret = binder_ioctl_freeze(&info, target_procs[i]);
+			if (ret < 0)
+				break;
 		}
+
+		/*
+		 * A process has one binder_proc per context (binder, hwbinder)
+		 * it uses. If one of them cannot be frozen now, the caller does
+		 * not freeze the process, so the others must not stay frozen.
+		 */
+		if (ret < 0) {
+			info.enable = 0;
+			while (i-- > 0)
+				binder_ioctl_freeze(&info, target_procs[i]);
+		}
+
+		for (i = 0; i < target_procs_count; i++)
+			binder_proc_dec_tmpref(target_procs[i]);
 
 		kfree(target_procs);
 
