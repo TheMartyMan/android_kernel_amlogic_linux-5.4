@@ -1079,9 +1079,15 @@ int rdma_write_reg(int handle, u32 adr, u32 val)
 		!is_in_vsync_isr_viu3()) || (smp_processor_id() != 0)) &&
 		vsync_rdma_handle[VSYNC_RDMA] == handle) {
 #endif
-		dump_stack();
-		pr_info("rdma_write(%d) %d(%x)<=%x\n",
-			handle, ins->rdma_item_count, adr, val);
+		/*
+		 * The vsync interrupt itself ends up here when it is resent on
+		 * another CPU (output mode change): ~90 stack traces took 0.6 s
+		 * in the interrupt handler.
+		 */
+		if (debug_flag & 0x40)
+			dump_stack();
+		pr_info_ratelimited("rdma_write(%d) %d(%x)<=%x\n",
+				    handle, ins->rdma_item_count, adr, val);
 	}
 	if (debug_flag & 1)
 		pr_info("rdma_write(%d) %d(%x)<=%x\n",
