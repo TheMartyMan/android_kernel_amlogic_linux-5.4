@@ -66,11 +66,9 @@ static int __init proc_cmdline_init(void)
 
 	/*
 	 * The boot loader's environment has androidboot.selinux=permissive and
-	 * is reset by every update. Let the boot image decide, except in
-	 * recovery.
+	 * is reset by every update. Let the boot image decide.
 	 */
-	if (strstr(cmd, "androidboot.force_normal_boot=1"))
-		keep_last_value(cmd, "androidboot.selinux=");
+	keep_last_value(cmd, "androidboot.selinux=");
 
 	proc_create_single("cmdline", 0, NULL, cmdline_proc_show);
 	return 0;
