@@ -14,6 +14,31 @@ static int cmdline_proc_show(struct seq_file *m, void *v)
 	return 0;
 }
 
+/*
+ * Drops all values of an option but the last one. The boot loader's command line
+ * comes first and the boot image's last; for kernel parameters the last value
+ * counts, but Android's init takes the first one.
+ */
+static void __init keep_last_value(char *cmd, const char *option)
+{
+	char *prev = NULL, *p = cmd;
+
+	while ((p = strstr(p, option))) {
+		if (p != cmd && p[-1] != ' ') {
+			p++;
+			continue;
+		}
+		if (prev) {
+			/* p starts a later word, so prev's word ends at a space */
+			char *next = strchr(prev, ' ') + 1;
+
+			memmove(prev, next, strlen(next) + 1);
+			p -= next - prev;
+		}
+		prev = p++;
+	}
+}
+
 static int __init proc_cmdline_init(void)
 {
     char *offset_addr, *cmd = new_command_line;
@@ -38,6 +63,15 @@ static int __init proc_cmdline_init(void)
 
         memmove(offset_addr, &cmd[offset + i + 1], len - i - offset);
     }
+
+	/*
+	 * The boot loader's environment has androidboot.selinux=permissive and
+	 * is reset by every update. Let the boot image decide, except in
+	 * recovery.
+	 */
+	if (strstr(cmd, "androidboot.force_normal_boot=1"))
+		keep_last_value(cmd, "androidboot.selinux=");
+
 	proc_create_single("cmdline", 0, NULL, cmdline_proc_show);
 	return 0;
 }
